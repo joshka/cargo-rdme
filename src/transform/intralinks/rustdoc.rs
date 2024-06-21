@@ -264,7 +264,6 @@ fn get_item_info<'a>(
     }
 }
 
-// WIP! are we using the right abstraction here?
 fn transitive_items<'a>(
     item_id: &'a ItemId,
     item_info: &ItemInfo<'a>,
@@ -482,7 +481,7 @@ fn run_rustdoc(
             .manifest_path(manifest_path)
             .document_private_items(true)
             // WIP!simple We need to parameterize the features based on the configuration
-            // also "no default features"
+            //      also "no default features"
             .all_features(true)
             .quiet(true)
             .color(rustdoc_json::Color::Never)
@@ -507,9 +506,6 @@ fn run_rustdoc(
         })?
     };
 
-    // WIP! temp debug
-    eprintln!("json file: {}", rustdoc_json_path.display());
-
     let rustdoc_crate = crate_from_file(&rustdoc_json_path)?;
 
     match rustdoc_crate.format_version {
@@ -521,6 +517,19 @@ fn run_rustdoc(
     }
 }
 
+fn items_info(rustdoc_crate: &Crate) -> HashMap<&ItemId, ItemInfo<'_>> {
+    let mut items_info: HashMap<&ItemId, ItemInfo<'_>> =
+        HashMap::with_capacity(rustdoc_crate.index.len());
+
+    for (item_id, item_summary) in &rustdoc_crate.paths {
+        let item_info = ItemInfo::from(item_summary, None, ItemContext::Normal);
+
+        transitive_items(item_id, &item_info, ItemContext::Normal, rustdoc_crate, &mut items_info);
+    }
+
+    items_info
+}
+
 pub fn create_intralink_resolver<'a>(
     package_name: &'a str,
     package_target: &PackageTarget,
@@ -530,16 +539,7 @@ pub fn create_intralink_resolver<'a>(
 ) -> Result<IntralinkResolver<'a>, IntralinkError> {
     let rustdoc_crate = run_rustdoc(package_target, workspace_package, manifest_path)?;
 
-    let mut items_info: HashMap<&ItemId, ItemInfo<'_>> =
-        HashMap::with_capacity(rustdoc_crate.index.len());
-
-    // WIP!simple this should be in a function of it's own.
-    for (item_id, item_summary) in &rustdoc_crate.paths {
-        let item_info = ItemInfo::from(item_summary, None, ItemContext::Normal);
-
-        transitive_items(item_id, &item_info, ItemContext::Normal, &rustdoc_crate, &mut items_info);
-    }
-
+    let items_info: HashMap<&ItemId, ItemInfo<'_>> = items_info(&rustdoc_crate);
     let links_items_id = crate_rustdoc_intralinks(&rustdoc_crate);
     let mut intralink_resolver = IntralinkResolver::new(package_name, &config.docs_rs);
 
@@ -557,5 +557,3 @@ pub fn create_intralink_resolver<'a>(
 }
 
 // WIP! move the tests that belong here
-
-// WIP! support links like [`crate`]

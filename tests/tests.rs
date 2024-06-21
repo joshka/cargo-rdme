@@ -463,6 +463,29 @@ fn integration_test_transform_intralinks_skip_rustdoc_when_no_intralinks() {
 
     let options =
         TestOptions { args: &["--entrypoint", "bin:real-test"], ..TestOptions::default() };
+
+    run_test_with_options(test_name, &options);
+}
+
+#[test]
+fn integration_test_transform_intralinks_skip_rustdoc_when_strip_intralinks() {
+    let test_name = "transform_intralinks_skip_rustdoc_when_strip_intralinks";
+
+    // This checks that if rustdoc runs we actually fail, so that the real test before is
+    // actually asserting that rustdoc is not running because otherwise it would have failed.
+    let options = TestOptions {
+        args: &["--entrypoint", "bin:test-precondition"],
+        expected_exit_code: 1,
+        check_readme_expected: false,
+        ..TestOptions::default()
+    };
+    run_test_with_options(test_name, &options);
+
+    let options = TestOptions {
+        args: &["--entrypoint", "bin:real-test", "--intralinks-strip-links"],
+        ..TestOptions::default()
+    };
+
     run_test_with_options(test_name, &options);
 }
 

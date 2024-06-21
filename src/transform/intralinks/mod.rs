@@ -156,23 +156,19 @@ where
 
         // WIP! have a thing that checks if the nightly toolchain is installed
 
+        // We only load intralink resolution information when we need it.
         let intralink_resolver: IntralinkResolver<'_> = match strip_links {
             true => {
-                // WIP! ideally we wouldn't create an intralink resolver if we dont need it
-                // see other WIP to split the strip links into another place.
+                // Create an empty resolver, since we are going to strip all intralinks.
                 IntralinkResolver::new(self.package_name.as_str(), &self.config.docs_rs)
             }
-            // We only load symbols type information when we need them.
-            false => {
-                // WIP! ideally we would want to return
-                create_intralink_resolver(
-                    self.package_name.as_str(),
-                    &self.package_target,
-                    self.workspace_package.as_deref(),
-                    &self.manifest_path,
-                    &self.config,
-                )?
-            }
+            false => create_intralink_resolver(
+                self.package_name.as_str(),
+                &self.package_target,
+                self.workspace_package.as_deref(),
+                &self.manifest_path,
+                &self.config,
+            )?,
         };
 
         let doc = rewrite_links(doc, &intralink_resolver, &self.emit_warning, &self.config);
@@ -181,7 +177,6 @@ where
     }
 }
 
-// WIP! separate the strip links logic from rewrite_reference_links_definitions and rewrite_markdown_links?
 fn rewrite_links(
     doc: &Doc,
     intralink_resolver: &IntralinkResolver,
@@ -191,18 +186,13 @@ fn rewrite_links(
     let RewriteReferenceLinksResult { doc, reference_links_to_remove } =
         rewrite_reference_links_definitions(doc, intralink_resolver, emit_warning, config);
 
-    let doc = rewrite_markdown_links(
+    rewrite_markdown_links(
         &doc,
         intralink_resolver,
         emit_warning,
         config,
         &reference_links_to_remove,
-    );
-
-    // TODO Refactor link removal code so that it all happens in a new phase and not inside the
-    //      functions above.
-
-    doc
+    )
 }
 
 enum MarkdownLinkAction {
